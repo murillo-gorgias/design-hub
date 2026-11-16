@@ -2,6 +2,8 @@
 
 A home for design explorations and prototypes. The homepage is a grid of tiles. Each tile shows an image, a title and a short description, and opens a project hosted in this repo.
 
+**Live:** https://murillo-gorgias.github.io/design-hub/
+
 These are works in progress, shared for review. They are not final designs.
 
 ## Add a project
