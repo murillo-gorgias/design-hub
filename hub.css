@@ -1,0 +1,149 @@
+/* Design hub homepage. Gorgias brand: warm paper, ink text, serif title, hairline borders. */
+
+@font-face { font-family: 'Feature Deck'; src: url('assets/fonts/FeatureDeck-Regular-Web.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Inter'; src: url('assets/fonts/InterVariable.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Red Hat Mono'; src: url('assets/fonts/RedHatMono-VF.woff2') format('woff2'); font-weight: 300 700; font-display: swap; }
+
+:root {
+  --paper: #FCFAF8; --cream: #F8F5F1; --white: #FFFFFF; --ink: #1B1A19;
+  --head: #252423; --body: #363433; --text: #5F5C59; --mute: #8E8985;
+  --border: #E8E2DC; --faded: #F0EBE5; --rule: #DFD9D3; --coral: #FB6B4B;
+
+  --page-max: 1200px;
+  --gutter: clamp(20px, 4vw, 48px);
+  --tile-min: 320px;
+  --tile-radius: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--paper); }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--body);
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.top, main, .foot {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+.label {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.label b { color: var(--coral); font-weight: 500; }
+
+/* Top bar */
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 28px;
+  padding-bottom: 28px;
+}
+.wordmark { height: 22px; width: auto; display: block; }
+
+/* Intro */
+main { flex: 1; }
+.intro { padding: clamp(36px, 5vw, 64px) 0 clamp(40px, 5vw, 60px); }
+h1 {
+  font-family: 'Feature Deck', Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(38px, 5.2vw, 56px);
+  line-height: 1.1;
+  letter-spacing: -.01em;
+  color: var(--head);
+  margin: 16px 0 18px;
+}
+.lede { font-size: 19px; line-height: 1.45; color: var(--text); max-width: 560px; }
+
+/* Grid */
+.grid-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 28px;
+}
+.grid-head h2 { color: var(--head); }
+.grid-head #count { color: var(--mute); }
+
+.grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--tile-min), 100%), 1fr));
+  gap: 28px 24px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--tile-radius);
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color .18s ease, transform .18s ease;
+}
+.tile:hover { border-color: var(--ink); transform: translateY(-2px); }
+.tile:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; }
+
+.tile-img {
+  aspect-ratio: 16 / 10;
+  background: var(--cream);
+  border-bottom: 1px solid var(--faded);
+  overflow: hidden;
+}
+.tile-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .3s ease;
+}
+.tile:hover .tile-img img { transform: scale(1.03); }
+.tile-img.is-missing img { display: none; }
+
+.tile-body { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 8px; }
+.tile-body .label { font-size: 12px; }
+.tile-body h3 { font-size: 20px; font-weight: 600; line-height: 1.25; color: var(--head); letter-spacing: -.005em; }
+.tile-body p {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.message { color: var(--text); font-size: 17px; padding: 8px 0 24px; }
+
+/* Footer */
+.foot { padding-top: clamp(56px, 8vw, 96px); padding-bottom: 36px; }
+.foot .label { color: var(--mute); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tile, .tile-img img { transition: none; }
+  .tile:hover, .tile:hover .tile-img img { transform: none; }
+}

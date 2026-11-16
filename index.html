@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Design hub</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/FeatureDeck-Regular-Web.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="hub.css">
+</head>
+<body>
+<header class="top">
+  <img class="wordmark" src="assets/gorgias-logo.svg" alt="Gorgias">
+  <span class="label">Brand design</span>
+</header>
+
+<main>
+  <section class="intro">
+    <div class="label"><b>&#10035;&#xFE0E;</b> Design hub</div>
+    <h1>Explorations and ideas, in one place</h1>
+    <p class="lede">Prototypes and design explorations in progress. Each tile opens a live page you can try.</p>
+  </section>
+
+  <section class="projects" aria-labelledby="projects-title">
+    <div class="grid-head">
+      <h2 class="label" id="projects-title">Projects</h2>
+      <span class="label" id="count"></span>
+    </div>
+    <ul class="grid" id="grid"></ul>
+    <p class="message" id="message" hidden></p>
+    <noscript><p class="message">Turn on JavaScript to see the projects.</p></noscript>
+  </section>
+</main>
+
+<footer class="foot">
+  <span class="label">Work in progress, shared for review</span>
+</footer>
+
+<script src="projects.js"></script>
+<script src="hub.js"></script>
+</body>
+</html>
