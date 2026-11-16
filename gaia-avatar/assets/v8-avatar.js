@@ -1,9 +1,9 @@
 /* Gaia avatar, version 8: the drawing and motion code.
    Exploration code. One file, no build step. The page is ../v8-gaia-avatar.html.
    Version 8 only changes the mouth on Thinking, Reading, Drafting and Measuring: a slight smile, a little less than Idle's. Two new sliders set it.
-   Version 7 only changes three hard hat defaults, to the values Murillo sent on 2026-11-16: size, height and bob.
+   Version 7 only changes three hard hat defaults, to the values sent on 2026-11-16: size, height and bob.
    Version 5 redraws the hard hat by the avatar's own rule: shapes are flat fills with no outline, and ink is only for marks on a shape.
-   Defaults are the values Murillo tuned in version 2 and sent on 2026-11-16. */
+   Defaults are the values tuned in version 2 and sent on 2026-11-16. */
 (() => {
 'use strict';
 
