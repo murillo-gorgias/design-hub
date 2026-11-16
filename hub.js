@@ -43,6 +43,8 @@
     var item = el('li');
     var link = el('a', 'tile');
     link.href = project.href;
+    link.target = '_blank';
+    link.rel = 'noopener';
 
     var frame = el('div', 'tile-img');
     var image = el('img');
