@@ -14,4 +14,14 @@
     kind         A one-word label, for example "Exploration" or "Prototype".
     date         YYYY-MM-DD. Tiles sort by this date, newest first.
 */
-window.HUB_PROJECTS = [];
+window.HUB_PROJECTS = [
+  {
+    title: 'Gaia avatar',
+    description:
+      'A flat, minimal avatar for Gaia, built on the Gorgias chat bubble. Ten animated states, with a panel to tune them.',
+    href: 'gaia-avatar/',
+    image: 'thumbs/gaia-avatar.png',
+    kind: 'Exploration',
+    date: '2026-11-16',
+  },
+];

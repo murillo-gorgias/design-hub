@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gaia avatar · v8</title>
+<style>
+@font-face { font-family: 'Feature Deck'; src: url('assets/fonts/FeatureDeck-Regular-Web.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Inter'; src: url('assets/fonts/InterVariable.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Red Hat Mono'; src: url('assets/fonts/RedHatMono-VF.woff2') format('woff2'); font-weight: 300 700; font-display: swap; }
+
+:root {
+  --paper: #FCFAF8; --cream: #F8F5F1; --white: #FFFFFF; --ink: #1B1A19;
+  --head: #252423; --body: #363433; --text: #5F5C59; --mute: #8E8985;
+  --border: #E8E2DC; --faded: #F0EBE5; --coral: #FB6B4B;
+  --panel-w: 344px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--paper); }
+body { font-family: 'Inter', system-ui, sans-serif; color: var(--head); -webkit-font-smoothing: antialiased; font-size: 14px; line-height: 1.45; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+.app { display: grid; grid-template-columns: minmax(0, 1fr) var(--panel-w); min-height: 100vh; }
+main { padding: 44px 48px 96px; max-width: 1120px; width: 100%; margin: 0 auto; }
+
+.label { font-family: 'Red Hat Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); font-weight: 500; }
+.label b { color: var(--coral); font-weight: 500; }
+h1 { font-family: 'Feature Deck', 'Playfair Display', Georgia, serif; font-weight: 400; font-size: 46px; line-height: 1.05; letter-spacing: -.01em; margin: 12px 0 14px; }
+.lede { max-width: 640px; color: var(--text); font-size: 16px; line-height: 1.5; }
+h2 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+.sub { color: var(--text); margin-bottom: 18px; max-width: 660px; }
+section.block { margin-top: 56px; }
+
+/* Stage */
+.stage { margin-top: 32px; border-radius: 28px; background: var(--cream); border: 1px solid var(--border); padding: 28px 28px 24px; position: relative; transition: background .35s, border-color .35s, color .35s; }
+.stage[data-bg="white"] { background: var(--white); }
+.stage[data-bg="ink"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.stage[data-bg="ink"] .caption, .stage[data-bg="ink"] .stage-hint { color: #C0BBB5; }
+.stage[data-bg="ink"] .chip { border-color: #363433; color: #C0BBB5; }
+.stage[data-bg="ink"] .chip:hover { border-color: #5F5C59; color: var(--paper); }
+.stage[data-bg="ink"] .chip.on { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+.stage[data-bg="ink"] .act { color: #C0BBB5; border-color: #363433; }
+.stage[data-bg="ink"] .caption strong { color: var(--paper); }
+.stage-top { display: flex; justify-content: space-between; align-items: center; }
+.stage-hint { color: var(--mute); font-size: 12px; }
+.acts { display: flex; gap: 6px; }
+.act { font-size: 12px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); color: var(--text); transition: border-color .15s, color .15s; }
+.act:hover { border-color: var(--mute); color: var(--head); }
+.hero-wrap { height: 430px; display: flex; align-items: center; justify-content: center; padding-top: 50px; }
+.caption { text-align: center; color: var(--text); min-height: 22px; margin-bottom: 18px; font-size: 15px; }
+.caption strong { color: inherit; font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.chip { padding: 7px 13px; border-radius: 999px; border: 1px solid var(--border); background: transparent; font-size: 13px; color: var(--body); transition: background .15s, border-color .15s, color .15s; }
+.chip:hover { border-color: var(--mute); }
+.chip.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+/* Avatar host */
+.av { position: relative; flex: none; cursor: pointer; }
+.av canvas { position: absolute; pointer-events: none; display: block; }
+
+/* Tiles */
+.tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.tile { text-align: left; border: 1px solid var(--border); border-radius: 18px; background: var(--white); padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 4px; transition: border-color .15s; }
+.tile:hover { border-color: var(--mute); }
+.tile.on { border-color: var(--ink); }
+.tile .slot { height: 128px; display: flex; align-items: center; justify-content: center; padding-top: 22px; margin-bottom: 6px; }
+.tile .name { font-weight: 600; font-size: 13.5px; display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.tile .tag { font-family: 'Red Hat Mono', monospace; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--coral); font-weight: 500; }
+.tile .what { color: var(--text); font-size: 12.5px; line-height: 1.4; }
+
+/* Sizes, colours, bar */
+.card { border: 1px solid var(--border); border-radius: 18px; background: var(--white); padding: 44px 28px 26px; }
+.sizes { display: flex; align-items: flex-end; gap: 44px; }
+.size { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.size .px { font-family: 'Red Hat Mono', monospace; font-size: 11px; color: var(--mute); }
+.colours { display: flex; gap: 30px; align-items: flex-end; }
+.colour { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text); }
+.colour.on { color: var(--head); font-weight: 600; }
+.barwrap { background: var(--cream); border-radius: 18px; border: 1px solid var(--border); padding: 44px 28px; display: flex; justify-content: center; }
+.bar { display: flex; align-items: center; gap: 12px; background: var(--white); border: 1px solid var(--border); border-radius: 999px; padding: 10px 20px 10px 14px; min-width: 400px; box-shadow: 0 1px 0 rgba(27,26,25,.03), 0 10px 28px -14px rgba(27,26,25,.18); }
+.bar .status { font-size: 14px; color: var(--body); transition: opacity .22s; white-space: nowrap; }
+.bar .status.out { opacity: 0; }
+.bar .state { margin-left: auto; padding-left: 18px; }
+
+/* Panel */
+aside { position: sticky; top: 0; height: 100vh; overflow-y: auto; border-left: 1px solid var(--border); background: var(--white); padding: 22px 20px 40px; }
+aside header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+aside .note { color: var(--text); font-size: 12.5px; margin-bottom: 14px; }
+.panel-btns { display: flex; gap: 6px; margin-bottom: 6px; }
+.pbtn { flex: 1; font-size: 12.5px; padding: 7px 10px; border-radius: 9px; border: 1px solid var(--border); color: var(--body); }
+.pbtn:hover { border-color: var(--mute); }
+.pbtn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.toast { font-size: 12px; color: var(--text); min-height: 18px; margin-bottom: 4px; }
+.tabs { display: flex; gap: 4px; background: var(--cream); border-radius: 11px; padding: 4px; margin-bottom: 4px; }
+.tab { flex: 1; font-size: 12.5px; padding: 7px 8px; border-radius: 8px; color: var(--text); }
+.tab.on { background: var(--white); color: var(--head); font-weight: 600; box-shadow: 0 1px 2px rgba(27,26,25,.08); }
+.tabpane[hidden] { display: none; }
+.grp { border-top: 1px solid var(--border); padding: 14px 0 6px; }
+.tabpane .grp:first-child { border-top: 0; }
+.grp h3 { font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); font-weight: 500; margin-bottom: 10px; }
+.row { display: grid; grid-template-columns: 1fr auto; column-gap: 8px; row-gap: 3px; margin-bottom: 11px; }
+.row .lab { font-size: 12.5px; color: var(--body); }
+.row output { font-family: 'Red Hat Mono', monospace; font-size: 11px; color: var(--mute); }
+.row input[type=range] { grid-column: 1 / -1; }
+.row .hint { grid-column: 1 / -1; font-size: 11.5px; color: var(--mute); line-height: 1.35; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 16px; background: transparent; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 2px; background: var(--border); border-radius: 2px; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--ink); margin-top: -5px; transition: transform .12s; }
+input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.25); }
+input[type=range]::-moz-range-track { height: 2px; background: var(--border); }
+input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: var(--ink); }
+.seg { grid-column: 1 / -1; display: flex; gap: 4px; flex-wrap: wrap; }
+.seg button { flex: 1 1 auto; font-size: 12px; padding: 5px 9px; border-radius: 8px; border: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+.seg button.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.swatches { grid-column: 1 / -1; display: flex; gap: 7px; }
+.swatches button { width: 24px; height: 24px; border-radius: 8px; border: 1px solid rgba(27,26,25,.08); }
+.swatches button.on { outline: 2px solid var(--ink); outline-offset: 2px; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--body); margin-bottom: 11px; cursor: pointer; }
+.check input { accent-color: var(--ink); }
+
+.strip-body { background: #fff; padding: 12px; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <main>
+    <div class="label"><b>*</b> BRA2-93 · Gaia avatar · v8 · exploration</div>
+    <h1>A small face, and a prop for the job</h1>
+    <p class="lede">Gaia keeps the pill eyes and gains a small brow and a small mouth. Props appear only while a job needs them: glasses for reading and drafting, a magnifier for measuring, and a hard hat for testing. Sprout, flower, headset, cap and nose are gone.</p>
+
+    <div class="stage" id="stage" data-bg="cream">
+      <div class="stage-top">
+        <span class="stage-hint">Move the pointer. Click Gaia to make it hop.</span>
+        <div class="acts" id="acts"></div>
+      </div>
+      <div class="hero-wrap"><div class="av" id="hero"></div></div>
+      <p class="caption" id="caption"></p>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <section class="block">
+      <h2>The ten states</h2>
+      <p class="sub">Four states carry a prop, marked on the tile. The prop arrives when the state starts and leaves when it ends. Click a tile to send that state to the large avatar.</p>
+      <div class="tiles" id="tiles"></div>
+    </section>
+
+    <section class="block">
+      <h2>Sizes from 16 to 96 px</h2>
+      <p class="sub">These follow the state picked above. Small avatars drop detail: the mouth and glasses show from 24 px, brows and cheeks from 32 px. The hard hat shows at every size and drops its inner lines below 32 px.</p>
+      <div class="card"><div class="sizes" id="sizes"></div></div>
+    </section>
+
+    <section class="block">
+      <h2>In the Ask Gaia bar, at 24 px</h2>
+      <p class="sub">The bar cycles through the ten states with a matching status line.</p>
+      <div class="barwrap"><div class="bar"><div class="av" id="barAv"></div><span class="status" id="barStatus"></span><span class="label state" id="barState"></span></div></div>
+    </section>
+
+    <section class="block">
+      <h2>Seven colours</h2>
+      <p class="sub">Click one to change the body colour everywhere.</p>
+      <div class="card"><div class="colours" id="colours"></div></div>
+    </section>
+  </main>
+
+  <aside>
+    <header><h2>Tuning</h2><span class="label">saved in this browser</span></header>
+    <p class="note">The defaults are the latest values you sent on 16 November. Every control acts on all avatars at once.</p>
+    <div class="panel-btns">
+      <button class="pbtn primary" id="copy">Copy values</button>
+      <button class="pbtn" id="reset">Reset</button>
+    </div>
+    <div class="toast" id="toast"></div>
+    <div class="tabs">
+      <button class="tab on" data-tab="features">Face and props</button>
+      <button class="tab" data-tab="base">Shape and motion</button>
+    </div>
+    <div class="tabpane" id="pane-features"></div>
+    <div class="tabpane" id="pane-base" hidden></div>
+  </aside>
+</div>
+
+<script src="assets/v8-avatar.js"></script>
+<script>
+(() => {
+'use strict';
+const { params, DEFAULTS, BASE_GROUPS, FEATURE_GROUPS, COLOURS, STATES, STATE_ORDER, propOf, Avatar, avatars, pointer, saveParams } = window.GaiaV8;
+const $ = (s) => document.querySelector(s);
+const el = (tag, attrs = {}, text) => { const n = document.createElement(tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text !== undefined) n.textContent = text; return n; };
+
+/* ───────── check mode: ?strip=<state>,<state>&do=<move> lays frames out in a grid ───────── */
+const q = new URLSearchParams(location.search);
+if (q.has('strip')) {
+  document.body.className = 'strip-body'; document.body.innerHTML = '';
+  const names = q.get('strip').split(','), n = +q.get('n') || 20, step = +q.get('step') || 0.08, px = +q.get('px') || 90, cols = +q.get('cols') || 10, act = q.get('do');
+  if (q.get('colour')) params.colour = '#' + q.get('colour');
+  if (q.get('set')) Object.assign(params, JSON.parse(q.get('set')));
+  const cell = Math.round(px * 2.1), rows = Math.ceil(n / cols), out = document.createElement('canvas');
+  out.width = cols * cell; out.height = rows * cell * names.length; document.body.appendChild(out);
+  const octx = out.getContext('2d'); octx.fillStyle = '#F8F5F1'; octx.fillRect(0, 0, out.width, out.height);
+  names.forEach((st, row) => {
+    const a = new Avatar(document.createElement('div'), { px, seed: 3, detached: true });
+    for (let i = 0; i < 90; i++) a.update(1 / 60);
+    if (STATES[st]) a.setState(st);
+    if (act === 'spin') a.spinOnce(); if (act === 'hop') a.hop(1); if (act === 'bloom') a.bloomPulse(); if (act === 'colour') a.setColour('#9FA7F8', true);
+    for (let f = 0; f < n; f++) {
+      const sub = Math.max(1, Math.round(step * 120)); for (let i = 0; i < sub; i++) a.update(step / sub);
+      a.draw();
+      const x = (f % cols) * cell, y = (row * rows + Math.floor(f / cols)) * cell, off = (a.box - cell) / 2;
+      octx.drawImage(a.canvas, off * a.dpr, off * a.dpr, cell * a.dpr, cell * a.dpr, x, y, cell, cell);
+      octx.strokeStyle = '#E8E2DC'; octx.strokeRect(x + 0.5, y + 0.5, cell, cell);
+    }
+  });
+  return;
+}
+
+/* ───────── page ───────── */
+const hero = new Avatar($('#hero'), { px: 210, seed: 7 });
+$('#hero').addEventListener('click', () => { hero.hop(1); hero.blink(1); });
+
+const followers = [];
+function setHeroState(name) {
+  hero.setState(name); followers.forEach((f) => f.setState(name));
+  document.querySelectorAll('[data-state]').forEach((b) => b.classList.toggle('on', b.dataset.state === name));
+  const S = STATES[name];
+  $('#caption').innerHTML = ''; $('#caption').append(el('strong', {}, S.name + '. '), S.what);
+}
+
+STATE_ORDER.forEach((name) => {
+  const chip = el('button', { class: 'chip', 'data-state': name }, STATES[name].name);
+  chip.addEventListener('click', () => setHeroState(name)); $('#chips').appendChild(chip);
+});
+[['Hop', (a) => a.hop(1)], ['Spin', (a) => a.spinOnce()], ['Bloom', (a) => a.bloomPulse()], ['Blink', (a) => a.blink(2)]].forEach(([label, fn]) => {
+  const b = el('button', { class: 'act' }, label); b.addEventListener('click', () => fn(hero)); $('#acts').appendChild(b);
+});
+
+/* each tile names the prop its state carries, if the panel has it switched on */
+const tags = [];
+const refreshTags = () => tags.forEach(([name, tag]) => { const prop = propOf(params, name); tag.textContent = prop ? '+ ' + prop : ''; });
+STATE_ORDER.forEach((name, i) => {
+  const tile = el('button', { class: 'tile', 'data-state': name });
+  const slot = el('div', { class: 'slot' }), host = el('div', { class: 'av' });
+  const nameEl = el('div', { class: 'name' }, STATES[name].name), tag = el('span', { class: 'tag' }); nameEl.appendChild(tag); tags.push([name, tag]);
+  slot.appendChild(host); tile.append(slot, nameEl, el('div', { class: 'what' }, STATES[name].what));
+  tile.addEventListener('click', () => { setHeroState(name); $('#stage').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  $('#tiles').appendChild(tile);
+  new Avatar(host, { px: 64, state: name, seed: 20 + i });
+});
+
+[16, 20, 24, 32, 48, 96].forEach((px, i) => {
+  const box = el('div', { class: 'size' }), host = el('div', { class: 'av' });
+  box.append(host, el('div', { class: 'px' }, px + ' px')); $('#sizes').appendChild(box);
+  followers.push(new Avatar(host, { px, seed: 50 + i }));
+});
+
+const barAv = new Avatar($('#barAv'), { px: 24, seed: 71 });
+let barIdx = 0;
+function barNext() {
+  const name = STATE_ORDER[barIdx % STATE_ORDER.length]; barIdx++;
+  const status = $('#barStatus'); status.classList.add('out');
+  setTimeout(() => { status.textContent = STATES[name].status; $('#barState').textContent = STATES[name].name; status.classList.remove('out'); barAv.setState(name); }, 220);
+}
+barNext(); setInterval(barNext, 3800);
+
+const colourEls = [];
+COLOURS.forEach(([label, hex], i) => {
+  const box = el('button', { class: 'colour', 'data-hex': hex }), host = el('div', { class: 'av' });
+  box.append(host, el('span', {}, label)); box.addEventListener('click', () => setColour(hex)); $('#colours').appendChild(box);
+  new Avatar(host, { px: 52, seed: 90 + i, colour: hex }); colourEls.push(box);
+});
+function setColour(hex) {
+  params.colour = hex; saveParams();
+  avatars.forEach((a) => { if (!a.fixedColour) a.setColour(hex, true); });
+  markColour();
+}
+function markColour() {
+  colourEls.forEach((b) => b.classList.toggle('on', b.dataset.hex === params.colour));
+  document.querySelectorAll('.swatches button').forEach((b) => b.classList.toggle('on', b.dataset.hex === params.colour));
+}
+
+/* ───────── panel ───────── */
+const fmt = (it, v) => (it.step >= 1 ? String(Math.round(v)) : v.toFixed(it.step < 0.01 ? 3 : 2)) + (it.unit || '');
+function buildGroups(root, groups, isFeature) {
+  root.innerHTML = '';
+  const changed = () => { saveParams(); if (isFeature) refreshTags(); };
+  groups.forEach((g) => {
+    const sec = el('section', { class: 'grp' }); sec.appendChild(el('h3', {}, g.name));
+    g.items.forEach((it) => {
+      if (it.type === 'toggle') {
+        const lab = el('label', { class: 'check' }), box = el('input', { type: 'checkbox' }); box.checked = params[it.k];
+        box.addEventListener('change', () => { params[it.k] = box.checked; changed(); }); lab.append(box, it.label); sec.appendChild(lab); return;
+      }
+      const row = el('div', { class: 'row' }); row.appendChild(el('span', { class: 'lab' }, it.label));
+      if (it.type === 'seg' || it.type === 'chips') {
+        row.appendChild(el('span')); const seg = el('div', { class: 'seg' });
+        it.options.forEach(([val, label]) => {
+          const b = el('button', {}, label); b.classList.toggle('on', params[it.k] === val);
+          b.addEventListener('click', () => { params[it.k] = val; changed(); seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); applyLook(); });
+          seg.appendChild(b);
+        });
+        row.appendChild(seg);
+      } else if (it.type === 'swatch') {
+        row.appendChild(el('span')); const sw = el('div', { class: 'swatches' });
+        COLOURS.forEach(([label, hex]) => { const b = el('button', { title: label, 'data-hex': hex, style: `background:${hex}` }); b.addEventListener('click', () => setColour(hex)); sw.appendChild(b); });
+        row.appendChild(sw);
+      } else {
+        const out = el('output', {}, fmt(it, params[it.k]));
+        const input = el('input', { type: 'range', min: it.min, max: it.max, step: it.step }); input.value = params[it.k];
+        input.addEventListener('input', () => { params[it.k] = +input.value; out.textContent = fmt(it, params[it.k]); changed(); });
+        row.append(out, input);
+      }
+      if (it.hint) row.appendChild(el('span', { class: 'hint' }, it.hint));
+      sec.appendChild(row);
+    });
+    root.appendChild(sec);
+  });
+}
+function buildPanel() { buildGroups($('#pane-features'), FEATURE_GROUPS, true); buildGroups($('#pane-base'), BASE_GROUPS, false); markColour(); refreshTags(); }
+function applyLook() { $('#stage').dataset.bg = params.backdrop; }
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === t));
+  $('#pane-features').hidden = t.dataset.tab !== 'features'; $('#pane-base').hidden = t.dataset.tab !== 'base';
+}));
+const toast = (msg) => { $('#toast').textContent = msg; clearTimeout(toast.t); toast.t = setTimeout(() => { $('#toast').textContent = ''; }, 4200); };
+$('#reset').addEventListener('click', () => {
+  const colourChanged = params.colour !== DEFAULTS.colour;
+  Object.assign(params, DEFAULTS); saveParams(); buildPanel(); applyLook();
+  if (colourChanged) avatars.forEach((a) => { if (!a.fixedColour) a.setColour(params.colour, true); });
+  toast('Back to the values you sent.');
+});
+$('#copy').addEventListener('click', async () => {
+  const text = JSON.stringify(params, null, 1);
+  try { await navigator.clipboard.writeText(text); toast('Copied. Paste the values into the chat.'); }
+  catch (e) { window.prompt('Copy these values:', text); }
+});
+
+buildPanel(); applyLook(); setHeroState('idle');
+/* pointer */
+window.addEventListener('pointermove', (e) => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true; pointer.last = performance.now(); });
+document.addEventListener('pointerleave', () => { pointer.active = false; });
+
+/* only animate what is on screen */
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver((entries) => entries.forEach((en) => { const a = avatars.find((x) => x.host === en.target); if (a) a.visible = en.isIntersecting; }), { rootMargin: '160px' });
+  avatars.forEach((a) => io.observe(a.host));
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (pointer.active && now - pointer.last > 3500) pointer.active = false;
+  for (const a of avatars) { if (!a.visible) continue; a.update(dt); a.draw(); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
