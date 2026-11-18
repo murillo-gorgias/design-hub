@@ -16,6 +16,15 @@
 */
 window.HUB_PROJECTS = [
   {
+    title: 'AI Agent intent routing',
+    description:
+      'An onboarding illustration. AI Agent reads each ticket, finds the intent, then replies or hands it to the team.',
+    href: 'gaia-intent-routing/',
+    image: 'thumbs/gaia-intent-routing.png',
+    kind: 'Exploration',
+    date: '2026-11-18',
+  },
+  {
     title: 'Gaia avatar',
     description:
       'A flat, minimal avatar for Gaia, built on the Gorgias chat bubble. Ten animated states, with a panel to tune them.',

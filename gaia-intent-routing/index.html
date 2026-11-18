@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Agent intent routing microanimation</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <!--
+    AI Agent intent routing, an onboarding illustration (760 x 276). Design exploration.
+
+    One loop = three tickets of 12.8 s. Each ticket: the ticket arrives, AI Agent reads it
+    and marks the key words, the intent lands in a chip, then the outcome shows on a colour
+    field (Response: AI Agent replies; Handover: the team takes over). The outcome holds,
+    then the card swap sends the ticket to the back of the stack.
+
+    The three bars at the bottom left jump to a ticket. ?t=<seconds> freezes the loop.
+    Reduced motion shows the first ticket's outcome, still.
+  -->
+  <style>
+    @font-face {
+      font-family: "Feature Deck";
+      font-weight: 400;
+      font-style: normal;
+      font-display: block;
+      src: url(assets/fonts/FeatureDeck-Regular-Web.woff2) format("woff2");
+    }
+    @font-face {
+      font-family: "Red Hat Mono";
+      font-weight: 500;
+      font-style: normal;
+      font-display: block;
+      src: url(assets/fonts/RedHatMono-Medium-Web.woff2) format("woff2");
+    }
+    @font-face {
+      font-family: "Inter";
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: block;
+      src: url(assets/fonts/InterVariable.woff2) format("woff2");
+    }
+    :root {
+      --cream: #F8F5F1;
+      --white: #FFFFFF;
+      --ink: #1B1A19;
+      --head: #252423;
+      --body: #363433;
+      --text: #5F5C59;
+      --mute: #8E8985;
+      --border: #E8E2DC;
+      --coral: #FB6B4B;
+      --rose: #FFD2C9;
+      --peach: #FFEAE6;
+      --amber: #FFD896;
+      --orchid: #F7D1FB;
+      --sage: #C7EBC2;
+      --sage-deep: #A9DCA2;
+      --lift: 0 1px 2px rgba(27,26,25,.05), 0 10px 26px rgba(27,26,25,.07);
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      padding: 24px;
+      display: grid;
+      place-items: center;
+      background: #fff;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    p { margin: 0; }
+
+    .microanimation {
+      position: relative;
+      width: min(100%, 760px);
+      aspect-ratio: 760 / 276;
+      overflow: hidden;
+      border-radius: 8px;
+      background: var(--cream);
+    }
+    /* Drawing surface, always 760 x 276, scaled down to the box when it is narrower. */
+    .stage {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 760px;
+      height: 276px;
+      transform-origin: 0 0;
+    }
+    .scene { position: absolute; inset: 0; visibility: hidden; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    /* Flat colour field behind the outcome. */
+    .disc {
+      position: absolute;
+      left: 0;
+      top: 0;
+      border-radius: 50%;
+      opacity: 0;
+      will-change: transform, opacity;
+    }
+    .disc.field { width: 620px; height: 620px; margin: -310px 0 0 -310px; }
+    .rings { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+    .rings circle { fill: none; stroke-width: 1; }
+    /* The cards take z-index 0 to 3 during the swap. Everything that sits on them stays above. */
+    .side, .rings.over, .token, .badge { z-index: 4; }
+
+    /* The stack of tickets */
+    .card {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 360px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--white);
+      box-shadow: var(--lift);
+      transform-origin: 50% 0;
+      will-change: transform, opacity;
+    }
+    .card.ghost { height: 102px; }   /* same as the closed ticket, so the swap hands over cleanly */
+    .card.front { padding: 16px 18px 18px; }
+    .card-head { display: flex; align-items: center; justify-content: space-between; height: 26px; }
+    .from { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 12px; font-weight: 500; }
+    .from-icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--cream); color: var(--text); }
+    .from-icon svg { width: 14px; height: 14px; }
+    .agent-name { margin-right: 34px; color: var(--text); font-size: 12px; font-weight: 500; opacity: 0; }
+    .message {
+      position: relative;
+      width: max-content;
+      margin-top: 12px;
+      color: var(--ink);
+      font-size: 19px;
+      font-weight: 500;
+      letter-spacing: -.015em;
+      line-height: 28px;
+      white-space: nowrap;
+    }
+    .message-text { position: relative; }
+    .mark-sweep, .mark-key { position: absolute; top: 1px; height: 27px; border-radius: 6px; }
+    .mark-sweep { left: -5px; width: 0; background: var(--peach); }
+    .mark-key { background: var(--rose); opacity: 0; }
+    .intent { display: flow-root; height: 0; overflow: hidden; }
+    .intent-row { display: flex; align-items: center; gap: 10px; height: 26px; margin-top: 12px; }
+    .mono {
+      color: var(--text);
+      font-family: "Red Hat Mono", ui-monospace, Menlo, monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .08em;
+      line-height: 12px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .mono .dot { display: inline-block; width: 6px; height: 6px; margin: 0 7px 1px 0; border-radius: 50%; background: var(--coral); vertical-align: middle; }
+    .chip {
+      height: 26px;
+      padding: 0 11px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--cream);
+      color: var(--ink);
+      font-size: 12.5px;
+      font-weight: 500;
+      line-height: 24px;
+      white-space: nowrap;
+      transform-origin: 0 50%;
+      opacity: 0;
+    }
+
+    /* The outcome, set straight on the colour field */
+    .side { position: absolute; left: 428px; top: 0; width: 296px; will-change: transform, opacity; }
+    .side > * { position: absolute; left: 0; }
+    .side-label { top: 50px; color: var(--body); }
+    .side-title {
+      top: 65px;
+      color: var(--ink);
+      font-family: "Feature Deck", Georgia, serif;
+      font-size: 32px;
+      font-weight: 400;
+      letter-spacing: -.01em;
+      line-height: 40px;
+      white-space: nowrap;
+    }
+    .reply {
+      top: 118px;
+      width: 296px;
+      height: 58px;
+      padding: 10px 14px 10px 46px;
+      border-radius: 14px;
+      background: var(--white);
+      box-shadow: var(--lift);
+    }
+    .reply-text { color: var(--head); font-size: 13px; font-weight: 500; line-height: 19px; }
+    .reply-text span { display: inline-block; opacity: 0; }
+    .reply .typing { position: absolute; left: 47px; top: 17px; }
+    .typing { display: flex; gap: 4px; }
+    .typing i { display: block; width: 5px; height: 5px; border-radius: 50%; background: var(--mute); }
+    .team { top: 118px; display: flex; align-items: center; height: 40px; }
+    .avatar {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      margin-right: -9px;
+      border: 2px solid var(--white);
+      border-radius: 50%;
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 600;
+      opacity: 0;
+    }
+    .avatar:nth-child(1) { z-index: 3; background: var(--amber); }
+    .avatar:nth-child(2) { z-index: 2; background: var(--orchid); }
+    .avatar:nth-child(3) { z-index: 1; background: var(--sage); }
+    .team-bubble {
+      display: grid;
+      place-items: center;
+      height: 32px;
+      margin-left: 23px;
+      padding: 0 13px;
+      border-radius: 16px 16px 16px 5px;
+      background: var(--white);
+      box-shadow: var(--lift);
+      transform-origin: 0 100%;
+      opacity: 0;
+    }
+    .done {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      height: 28px;
+      padding: 0 13px 0 4px;
+      border-radius: 999px;
+      background: var(--white);
+      color: var(--head);
+      font-size: 11.5px;
+      font-weight: 500;
+      white-space: nowrap;
+      transform-origin: 0 50%;
+      opacity: 0;
+    }
+    .done svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+    /* AI Agent's mark and the ticket's "1": they travel, so they sit on the stage itself. */
+    .token, .badge { position: absolute; left: 0; top: 0; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
+    .token { display: grid; place-items: center; width: 26px; height: 26px; margin: -13px 0 0 -13px; background: var(--ink); color: #FCFAF8; }
+    .token svg { width: 15px; height: 15px; }
+    .badge {
+      display: grid;
+      place-items: center;
+      width: 16px;
+      height: 16px;
+      margin: -8px 0 0 -8px;
+      box-shadow: 0 0 0 2px var(--white);
+      background: var(--coral);
+      color: var(--white);
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1;
+    }
+    .badge.check { background: var(--sage-deep); color: var(--ink); }
+    .badge.check svg { width: 9px; height: 9px; }
+
+    /* Place in the loop. Click a bar to jump to that ticket. */
+    .progress { position: absolute; left: 36px; top: 244px; display: flex; gap: 5px; }
+    .progress button { all: unset; display: grid; align-items: center; width: 26px; height: 18px; cursor: pointer; }
+    .progress button span { display: block; height: 3px; overflow: hidden; border-radius: 2px; background: rgba(27,26,25,.13); }
+    .progress button b { display: block; height: 100%; background: rgba(27,26,25,.6); transform: scaleX(0); transform-origin: 0 50%; }
+    .progress button:hover span { background: rgba(27,26,25,.24); }
+    .progress button:focus-visible span { outline: 2px solid var(--ink); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="mark" viewBox="0 0 79.2565 79.6282"><path fill="currentColor" d="M58.0131 42.3291C56.1755 42.3291 54.3226 42.558 52.4981 43.0093C52.3804 42.0065 52.3194 40.9951 52.3194 39.9989C52.3194 39.0027 52.3804 38 52.5003 36.9886C54.3248 37.4398 56.1777 37.6687 58.0131 37.6687C64.825 37.6687 71.0354 34.5362 73.8343 29.6861C75.6392 26.5602 75.6784 23.1859 73.9476 20.1864C72.2147 17.1848 69.2719 15.5325 65.6599 15.5325C62.3139 15.5325 58.6365 17.0039 55.5738 19.5695C52.2976 22.3139 49.9172 26.0371 48.6703 30.3575C47.7243 29.9499 46.8371 29.5074 45.9739 29.0082C45.1063 28.5068 44.2801 27.9619 43.4562 27.3494C49.9978 20.5526 50.6823 11.9031 48.5134 6.66929C46.8523 2.66713 43.6153 0.371764 39.6262 0.371764C35.6371 0.371764 32.4022 2.66713 30.7434 6.66929C29.5074 9.6513 29.2807 13.296 30.1003 16.9363C30.9701 20.7815 32.9363 24.3717 35.7984 27.3472C34.9766 27.9619 34.1483 28.5068 33.2829 29.0082C32.4284 29.5008 31.5238 29.9542 30.5886 30.3575C27.8093 20.7227 19.8115 15.5325 13.5947 15.5325C9.98487 15.5325 7.04209 17.1848 5.30913 20.1842C3.57834 23.1837 3.61758 26.5581 5.42466 29.6861C8.22356 34.5362 14.4361 37.6687 21.2481 37.6687C23.0835 37.6687 24.9341 37.442 26.7587 36.9907C26.8764 37.9978 26.9352 39.0071 26.9352 39.9989C26.9352 40.9907 26.8764 41.9978 26.7565 43.0071C24.932 42.5558 23.0791 42.3291 21.2437 42.3291C14.4317 42.3291 8.22138 45.4616 5.42248 50.3095C3.61758 53.4376 3.57834 56.8119 5.30913 59.8114C7.04209 62.8108 9.98487 64.4653 13.5968 64.4653C16.9429 64.4653 20.6203 62.9918 23.6851 60.4261C26.9592 57.6817 29.3396 53.9607 30.5864 49.6403C31.5325 50.0457 32.4175 50.4904 33.2807 50.9918C34.1439 51.4888 34.9897 52.0468 35.7984 52.6485C29.2567 59.4452 28.5745 68.0926 30.7456 73.3285C32.4044 77.3329 35.6415 79.6282 39.6284 79.6282C43.6153 79.6261 46.8545 77.3307 48.5134 73.3285C49.7472 70.3465 49.976 66.7018 49.1542 63.0615C48.2867 59.2163 46.3205 55.6239 43.4562 52.6485C44.2692 52.0425 45.115 51.4844 45.9739 50.9896C46.8371 50.4904 47.7221 50.0479 48.6681 49.6403C51.4452 59.2708 59.443 64.4631 65.6599 64.4653C69.2697 64.4653 72.2125 62.813 73.9433 59.8136C75.6762 56.8141 75.6348 53.4397 73.8299 50.3117C71.031 45.4637 64.8229 42.3291 58.0109 42.3291H58.0131ZM65.6556 20.7379C66.8741 20.7379 68.5286 21.0867 69.4921 22.7586C70.4555 24.4262 69.9324 26.0327 69.3242 27.0878C67.4953 30.2551 62.7629 32.4698 57.8191 32.4698C56.4 32.4698 54.9722 32.2954 53.5684 31.951C55.1858 26.4861 60.1689 20.7379 65.6556 20.7379ZM21.4377 32.4676C16.4938 32.4698 11.7614 30.2572 9.93255 27.0899C9.32438 26.0349 8.80122 24.4284 9.7647 22.7586C10.7282 21.0867 12.3827 20.7379 13.6012 20.7379C19.0878 20.7379 24.0709 26.4861 25.6884 31.951C24.2846 32.2932 22.8568 32.4676 21.4377 32.4676ZM18.2944 57.8386C16.6835 58.7673 15.0617 59.2577 13.599 59.2577C12.3827 59.2577 10.7282 58.9089 9.7647 57.2392C8.80122 55.5694 9.32438 53.9629 9.93255 52.91C11.7614 49.7406 16.4917 47.528 21.4377 47.528C22.8568 47.528 24.2867 47.7024 25.6905 48.0468C24.4611 52.2692 21.7821 55.8223 18.2944 57.8386ZM35.9597 7.82896C36.5701 6.77393 37.6992 5.51834 39.6284 5.51834C41.4158 5.51834 42.8611 6.63006 43.6959 8.64858C45.2938 12.5091 44.3891 18.9374 39.624 23.903C38.6257 22.8611 37.7603 21.7123 37.0518 20.4829C34.5799 16.1995 34.1287 10.9963 35.9575 7.82896H35.9597ZM43.297 72.171C42.6867 73.2261 41.5575 74.4838 39.6284 74.4838C37.8409 74.4838 36.3957 73.3699 35.5586 71.3514C33.9586 67.4909 34.8633 61.0604 39.6284 56.0926C40.6289 57.1367 41.4921 58.2855 42.2028 59.5149C44.6769 63.7983 45.1259 69.0037 43.297 72.171ZM47.4889 44.5395C46.0981 45.0997 44.7248 45.7711 43.4017 46.534C42.0698 47.3035 40.8011 48.158 39.6284 49.0779C38.46 48.1624 37.1913 47.3079 35.8551 46.534C34.521 45.7646 33.1477 45.0954 31.7657 44.5373C31.975 43.0529 32.0818 41.527 32.0818 39.9989C32.0818 38.4708 31.9772 36.9341 31.7679 35.4583C33.1499 34.9003 34.5232 34.2311 35.8551 33.4638C37.1739 32.703 38.4404 31.8485 39.6262 30.9221C40.8099 31.8463 42.0785 32.7008 43.4017 33.4638C44.727 34.2289 46.1025 34.8981 47.4889 35.4583C47.2818 36.9471 47.175 38.473 47.175 39.9989C47.175 41.5248 47.2796 43.0637 47.4889 44.5395ZM69.4899 57.2414C68.5264 58.9111 66.8719 59.2599 65.6556 59.2599H65.6534C60.1689 59.2599 55.1837 53.5117 53.5662 48.0468C54.97 47.7024 56.3978 47.528 57.8169 47.528C62.7629 47.528 67.4953 49.7406 69.322 52.9079C69.9324 53.9629 70.4556 55.5716 69.4899 57.2414Z" /></symbol>
+      <symbol id="mail" viewBox="0 0 32.0438 32.0438"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M28.7058 24.0328L19.8366 16.0219M12.2071 16.0219L3.33794 24.0328M2.67031 9.3461L13.5718 16.9771C14.4545 17.595 14.8959 17.904 15.376 18.0237C15.8001 18.1294 16.2437 18.1294 16.6677 18.0237C17.1478 17.904 17.5892 17.595 18.472 16.9771L29.3734 9.3461M9.07906 26.7031H22.9647C25.208 26.7031 26.3296 26.7031 27.1864 26.2666C27.9401 25.8825 28.5529 25.2698 28.9369 24.5161C29.3734 23.6593 29.3734 22.5377 29.3734 20.2944V11.7494C29.3734 9.5061 29.3734 8.38447 28.9369 7.52765C28.5529 6.77397 27.9401 6.16121 27.1864 5.7772C26.3296 5.34063 25.208 5.34063 22.9647 5.34063H9.07906C6.83579 5.34063 5.71415 5.34063 4.85734 5.7772C4.10366 6.16121 3.4909 6.77397 3.10688 7.52765C2.67031 8.38447 2.67031 9.5061 2.67031 11.7494V20.2944C2.67031 22.5377 2.67031 23.6593 3.10688 24.5161C3.4909 25.2698 4.10366 25.8825 4.85734 26.2666C5.71415 26.7031 6.83579 26.7031 9.07906 26.7031Z" /></symbol>
+      <symbol id="response" viewBox="0 0 49.8921 49.8921">
+        <circle cx="24.9461" cy="24.9461" r="24.5905" fill="#C7EBC2" stroke="#A9DCA2" stroke-width="0.711111" />
+        <path fill="none" stroke="#1B1A19" stroke-width="1.65926" stroke-linecap="round" stroke-linejoin="round" d="M22.8569 24.2963L24.5161 25.9556L28.2495 22.2222M25.3458 31.3481C29.2404 31.3481 32.3976 28.1909 32.3976 24.2963C32.3976 20.4017 29.2404 17.2444 25.3458 17.2444C21.4511 17.2444 18.2939 20.4017 18.2939 24.2963C18.2939 25.0844 18.4232 25.8424 18.6617 26.5501C18.7515 26.8164 18.7964 26.9496 18.8045 27.0519C18.8125 27.1529 18.8064 27.2237 18.7814 27.3219C18.7561 27.4214 18.7003 27.5248 18.5885 27.7316L17.2315 30.2434C17.0379 30.6016 16.9412 30.7808 16.9628 30.919C16.9817 31.0395 17.0526 31.1455 17.1566 31.209C17.2761 31.2818 17.4786 31.2609 17.8837 31.219L22.1322 30.7799C22.2609 30.7666 22.3252 30.7599 22.3839 30.7622C22.4415 30.7644 22.4822 30.7698 22.5385 30.7827C22.5957 30.7959 22.6676 30.8236 22.8114 30.879C23.5979 31.182 24.4524 31.3481 25.3458 31.3481Z" />
+      </symbol>
+      <symbol id="handover" viewBox="0 0 49.8921 49.8921">
+        <circle cx="24.9461" cy="24.9461" r="24.5905" fill="#C7CCFD" stroke="#9FA7F8" stroke-width="0.711111" />
+        <path fill="none" stroke="#1B1A19" stroke-width="1.42222" stroke-linecap="round" stroke-linejoin="round" d="M32.0424 30.7979V29.3757C32.0424 28.0503 31.1359 26.9366 29.909 26.6209M27.4201 18.2047C28.4626 18.6266 29.1979 19.6486 29.1979 20.8424C29.1979 22.0361 28.4626 23.0581 27.4201 23.48M28.4868 30.7979C28.4868 29.4726 28.4868 28.8099 28.2703 28.2872C27.9816 27.5902 27.4279 27.0365 26.7309 26.7478C26.2082 26.5313 25.5455 26.5313 24.2201 26.5313H22.0868C20.7615 26.5313 20.0988 26.5313 19.5761 26.7478C18.8791 27.0365 18.3254 27.5902 18.0367 28.2872C17.8201 28.8099 17.8201 29.4726 17.8201 30.7979M25.9979 20.8424C25.9979 22.4133 24.7244 23.6868 23.1535 23.6868C21.5825 23.6868 20.309 22.4133 20.309 20.8424C20.309 19.2714 21.5825 17.9979 23.1535 17.9979C24.7244 17.9979 25.9979 19.2714 25.9979 20.8424Z" />
+      </symbol>
+    </defs>
+  </svg>
+
+  <section class="microanimation" aria-labelledby="summary">
+    <p id="summary" class="sr-only">AI Agent reads the intent of each incoming ticket. It responds when a skill matches the intent and hands the rest over to your team.</p>
+    <div class="stage">
+      <div class="scene" aria-hidden="true">
+        <div class="disc field"></div>
+        <svg class="rings" viewBox="0 0 760 276">
+          <circle class="ring-field" /><circle class="ring-field" />
+        </svg>
+
+        <div class="card ghost"></div>
+        <div class="card ghost"></div>
+        <div class="card front">
+          <div class="card-body">
+            <div class="card-head">
+              <span class="from"><span class="from-icon"><svg><use href="#mail" /></svg></span>New ticket</span>
+              <span class="agent-name">AI Agent</span>
+            </div>
+            <p class="message">
+              <span class="mark-sweep"></span><span class="mark-key"></span><span class="mark-key"></span>
+              <span class="message-text"></span>
+            </p>
+            <div class="intent">
+              <div class="intent-row">
+                <span class="mono intent-label"><span class="dot"></span>Intent</span>
+                <span class="chip"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="side">
+          <p class="mono side-label"><span class="dot"></span><span class="side-label-text"></span></p>
+          <p class="side-title"></p>
+          <div class="reply">
+            <p class="reply-text"></p>
+            <span class="typing"><i></i><i></i><i></i></span>
+          </div>
+          <div class="team">
+            <span class="avatar">MR</span><span class="avatar">JL</span><span class="avatar">AK</span>
+            <span class="team-bubble"><span class="typing"><i></i><i></i><i></i></span></span>
+          </div>
+          <div class="done"><svg><use href="#response" /></svg><span class="done-text"></span></div>
+        </div>
+
+        <svg class="rings over" viewBox="0 0 760 276">
+          <circle class="ring-read" stroke="#FB6B4B" /><circle class="ring-read" stroke="#FB6B4B" />
+        </svg>
+        <div class="token"><svg><use href="#mark" /></svg></div>
+        <div class="badge one">1</div>
+        <div class="badge check"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.3 4.1 7.4 8 3" /></svg></div>
+      </div>
+
+      <nav class="progress" aria-label="Example tickets">
+        <button type="button"><span><b></b></span></button>
+        <button type="button"><span><b></b></span></button>
+        <button type="button"><span><b></b></span></button>
+      </nav>
+    </div>
+  </section>
+
+  <script>
+    (() => {
+      const CYCLE = 12.8;
+      const TICKETS = [
+        { words: ["Where", "is", "my", "order?"], keys: [[0, 0], [3, 3]], intent: "Order status", outcome: "response",
+          reply: "Your order shipped yesterday. It arrives on Thursday." },
+        { words: ["An", "item", "is", "missing", "from", "my", "order"], keys: [[1, 3]], intent: "Missing item", outcome: "handover" },
+        { words: ["Do", "you", "ship", "to", "Canada?"], keys: [[2, 4]], intent: "International shipping", outcome: "response",
+          reply: "Yes, we ship to Canada. Delivery takes 5 to 8 days." },
+      ];
+      const LOOP = CYCLE * TICKETS.length;
+      // Copy comes from the diagram in the product today. dy centres each block on the stage.
+      const OUTCOME = {
+        response: { label: "A skill matches the intent", title: "Response", done: "AI Agent handles the conversation",
+                    icon: "#response", tint: "#C7EBC2", deep: "#A9DCA2", dy: 0, doneTop: 188 },
+        handover: { label: "AI Agent escalates", title: "Handover", done: "Your team takes over",
+                    icon: "#handover", tint: "#C7CCFD", deep: "#9FA7F8", dy: 8, doneTop: 170 },
+      };
+
+      // When each step starts, in seconds from the start of a ticket.
+      const T = {
+        badge: 0.5,     // the "1" pops onto the mail icon
+        agent: 1.5,     // AI Agent's mark flies in
+        sweep: 1.95,    // highlight crosses the message (0.9 s)
+        open: 3.2,      // the ticket opens for the intent
+        chip: 3.4,      // the intent chip pops
+        shake: 3.85,    // handover only: the mark shakes
+        shift: 4.3,     // ticket slides left, the colour field opens
+        fly: 4.95,      // response: the mark flies to the reply bubble
+        stream: 6.0,    // response: the reply writes itself (1.2 s)
+        check: 7.35,    // response: the "1" turns into a check
+        hand: 5.6,      // handover: the "1" flies to a teammate (0.8 s)
+        exit: 11.4,      // the outcome leaves, the ticket empties and goes home
+        swap: 11.85,     // the card swap (0.85 s)
+      };
+
+      // Geometry, in stage pixels.
+      const CY = 132;                 // vertical centre of the content
+      const CARD_W = 360;
+      const H_CLOSED = 102;
+      const GROW = 38;                // how far the ticket opens for the intent
+      const X_CENTER = 200;
+      const X_LEFT = 36;
+      const FIELD = { x: 640, y: 132 };
+      const FIELD_R = 310;
+      const SIDE_X = 428;
+      const BODY_TOP = 118;           // top of the reply bubble and of the team row
+      // Stack poses, front to back: [y, scale, opacity].
+      const POSE = [[0, 1, 1], [-11, 0.94, 0.75], [-21, 0.88, 0.45], [-29, 0.82, 0]];
+      // Card swap: how far the ticket dips below the stack, drifts right and tilts on its way back.
+      const SWAP = { length: 0.85, dip: 52, drift: 18, tilt: 3 };
+      const CREAM = "#F8F5F1", BORDER = "#E8E2DC";
+
+      const root = document.querySelector(".microanimation");
+      const stage = root.querySelector(".stage");
+      const q = (s) => stage.querySelector(s);
+      const qa = (s) => [...stage.querySelectorAll(s)];
+      const scene = q(".scene");
+      const field = q(".disc.field");
+      const fieldRings = qa(".ring-field");
+      const readRings = qa(".ring-read");
+      const [ghostBack, ghostNext] = qa(".ghost");
+      const front = q(".front");
+      const body = q(".card-body");
+      const agentName = q(".agent-name");
+      const messageText = q(".message-text");
+      const sweepMark = q(".mark-sweep");
+      const keyMarks = qa(".mark-key");
+      const intent = q(".intent");
+      const intentLabel = q(".intent-label");
+      const chip = q(".chip");
+      const side = q(".side");
+      const sideLabel = q(".side-label");
+      const sideLabelText = q(".side-label-text");
+      const sideTitle = q(".side-title");
+      const reply = q(".reply");
+      const replyText = q(".reply-text");
+      const replyDots = qa(".reply .typing i");
+      const team = q(".team");
+      const avatars = qa(".avatar");
+      const teamBubble = q(".team-bubble");
+      const teamDots = qa(".team-bubble .typing i");
+      const done = q(".done");
+      const doneIcon = q(".done use");
+      const doneText = q(".done-text");
+      const token = q(".token");
+      const tokenMark = q(".token svg");
+      const badgeOne = q(".badge.one");
+      const badgeCheck = q(".badge.check");
+      const bars = qa(".progress button");
+      const fills = qa(".progress b");
+
+      // Easing: the five brand curves, as cubic beziers.
+      const clamp = (v) => Math.min(1, Math.max(0, v));
+      const lerp = (a, b, k) => a + (b - a) * k;
+      const bezier = (x1, y1, x2, y2) => {
+        const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+        const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+        const xAt = (s) => ((ax * s + bx) * s + cx) * s;
+        const yAt = (s) => ((ay * s + by) * s + cy) * s;
+        return (x) => {
+          if (x <= 0) return 0;
+          if (x >= 1) return 1;
+          let lo = 0, hi = 1, s = x;
+          for (let i = 0; i < 24; i++) { xAt(s) < x ? (lo = s) : (hi = s); s = (lo + hi) / 2; }
+          return yAt(s);
+        };
+      };
+      const EASE = {
+        out: bezier(0.16, 1, 0.3, 1),        // arrive and settle
+        glide: bezier(0.5, 0, 0.2, 1),       // travel: leaves promptly, lands softly
+        back: bezier(0.34, 1.56, 0.64, 1),   // pop with a small overshoot
+        in: bezier(0.55, 0, 0.8, 0.4),       // leave
+        inOut: bezier(0.65, 0, 0.35, 1),
+        spin: bezier(0.4, 0.2, 0.3, 1),
+        line: (x) => x,
+      };
+      const seg = (u, start, length, ease = EASE.out) => ease(clamp((u - start) / length));
+
+      const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+      const mix = (a, b, k) => {
+        const from = rgb(a), to = rgb(b);
+        return `rgb(${from.map((v, i) => Math.round(lerp(v, to[i], k))).join(",")})`;
+      };
+      const at = (el, x, y, extra = "") => { el.style.transform = `translate(${x}px, ${y}px) ${extra}`; };
+      // House entrance: fade up from a light blur.
+      const arrive = (el, k, rise = 10, extra = "") => {
+        el.style.opacity = clamp(k * 1.5);
+        el.style.transform = `translateY(${(1 - k) * rise}px) ${extra}`;
+        el.style.filter = k < 1 ? `blur(${(1 - k) * 5}px)` : "none";
+      };
+      const pose = (el, x, top, from, to, k) => {
+        const y = top + lerp(POSE[from][0], POSE[to][0], k);
+        const s = lerp(POSE[from][1], POSE[to][1], k);
+        at(el, x, y, `scale(${s})`);
+        return lerp(POSE[from][2], POSE[to][2], k);
+      };
+      const bounce = (dots, u) => dots.forEach((dot, i) => {
+        const lift = Math.sin(Math.PI * clamp((((u * 1.5 - i * 0.16) % 1) + 1) % 1 / 0.5));
+        dot.style.transform = `translateY(${-3.2 * lift}px)`;
+        dot.style.opacity = 0.4 + 0.6 * lift;
+      });
+
+      let current = -1;
+      let messageW = 0, chipX = 0, replyWords = [];
+
+      // Put one ticket's words on the stage and measure what the animation needs.
+      function setTicket(index) {
+        const ticket = TICKETS[index], outcome = OUTCOME[ticket.outcome];
+        messageText.replaceChildren(...ticket.words.flatMap((word, i) => {
+          const el = document.createElement("span");
+          el.textContent = word;
+          return i ? [" ", el] : [el];
+        }));
+        const words = [...messageText.children];
+        messageW = messageText.offsetWidth;
+        keyMarks.forEach((mark, i) => {
+          const group = ticket.keys[i];
+          mark.style.display = group ? "block" : "none";
+          if (!group) return;
+          const first = words[group[0]], last = words[group[1]];
+          mark.style.left = first.offsetLeft - 5 + "px";
+          mark.style.width = last.offsetLeft + last.offsetWidth - first.offsetLeft + 10 + "px";
+        });
+
+        chip.textContent = ticket.intent;
+        chipX = 18 + intentLabel.offsetWidth + 10 + chip.offsetWidth / 2;
+
+        sideLabelText.textContent = outcome.label;
+        sideTitle.textContent = outcome.title;
+        doneText.textContent = outcome.done;
+        doneIcon.setAttribute("href", outcome.icon);
+        done.style.top = outcome.doneTop + "px";
+        field.style.background = outcome.tint;
+        fieldRings.forEach((ring) => ring.setAttribute("stroke", outcome.deep));
+        const isResponse = ticket.outcome === "response";
+        reply.style.display = isResponse ? "block" : "none";
+        team.style.display = isResponse ? "none" : "flex";
+        replyWords = (ticket.reply || "").split(" ").map((word) => {
+          const el = document.createElement("span");
+          el.textContent = word;
+          return el;
+        });
+        replyText.replaceChildren(...replyWords.flatMap((el, i) => (i ? [" ", el] : [el])));
+        current = index;
+      }
+
+      function render(t) {
+        const index = Math.floor(t / CYCLE) % TICKETS.length;
+        const u = t % CYCLE;
+        if (index !== current) setTicket(index);
+        const ticket = TICKETS[index];
+        const outcome = OUTCOME[ticket.outcome];
+        const isResponse = ticket.outcome === "response";
+
+        // The stack floats a little until the outcome shows, then holds still until it goes home.
+        // The outcome floats all the time.
+        const calm = seg(u, T.shift, 0.75, EASE.glide) * (1 - seg(u, T.exit + 0.05, 0.55, EASE.glide));
+        const floatA = 2 * Math.sin((2 * Math.PI * t) / (LOOP / 5)) * (1 - calm);
+        const floatB = 2 * Math.sin((2 * Math.PI * t) / (LOOP / 4) + 1.3);
+
+        const shift = seg(u, T.shift, 0.75, EASE.glide);
+        const exit = seg(u, T.exit, 0.3, EASE.in);
+        const home = seg(u, T.exit + 0.05, 0.55, EASE.glide);
+        const fold = seg(u, T.exit + 0.05, 0.4, EASE.inOut);    // the ticket closes back to its first height
+        const open = seg(u, T.open, 0.5, EASE.inOut) * (1 - fold);
+
+        // The stack: the front ticket opens around its centre, slides left, then glides home.
+        const cardH = H_CLOSED + GROW * open;
+        const top = CY - cardH / 2 + floatA;
+        const slidX = lerp(X_CENTER, X_LEFT, shift);
+        const frontX = lerp(slidX, X_CENTER, home);
+
+        // Card swap: the empty ticket dips out of the stack and tucks in at the back.
+        // The cards behind it move forward a beat later. At the end the stack looks exactly
+        // as it did at the start, so the next ticket's words appear on the front card.
+        const swap = seg(u, T.swap, SWAP.length, EASE.inOut);
+        const advance = seg(u, T.swap + 0.18, SWAP.length - 0.18, EASE.inOut);
+        const tuck = Math.sin(Math.PI * swap);
+        const frontScale = lerp(POSE[0][1], POSE[2][1], swap);
+        at(front, frontX + SWAP.drift * tuck, top + lerp(POSE[0][0], POSE[2][0], swap) + SWAP.dip * tuck,
+           `rotate(${SWAP.tilt * tuck}deg) scale(${frontScale})`);
+        // Solid until it passes behind the stack, then it fades to the back card's strength.
+        front.style.opacity = lerp(POSE[0][2], POSE[2][2], clamp((swap - 0.5) / 0.5));
+        front.style.zIndex = swap < 0.5 ? 3 : 0;               // passes behind the stack at the bottom of its dip
+        ghostNext.style.zIndex = 2;
+        ghostBack.style.zIndex = 1;
+        ghostNext.style.opacity = pose(ghostNext, frontX, top, 1, 0, advance);
+        ghostBack.style.opacity = pose(ghostBack, frontX, top, 2, 1, advance);
+        // The words ride the ticket out of the stack and fade as it tucks in behind.
+        body.style.opacity = seg(u, 0.15, 0.4, EASE.line) * (1 - seg(u, T.swap + 0.25, 0.3, EASE.line));
+
+        // Reading: a highlight crosses the message, then only the key words stay marked.
+        const settle = seg(u, T.sweep + 0.9, 0.4, EASE.line);
+        sweepMark.style.width = (messageW + 10) * seg(u, T.sweep, 0.9, EASE.inOut) + "px";
+        sweepMark.style.opacity = 1 - settle;
+        keyMarks.forEach((mark) => { mark.style.opacity = settle; });
+
+        // The intent lands in a chip, which takes the outcome's colour once that is known.
+        intent.style.height = GROW * open + "px";
+        intent.style.opacity = 1 - fold;
+        intent.style.overflow = open < 1 ? "hidden" : "visible";
+        intentLabel.style.opacity = seg(u, T.chip - 0.05, 0.3, EASE.line);
+        chip.style.opacity = clamp((u - T.chip) / 0.12);
+        chip.style.transform = `scale(${0.7 + 0.3 * seg(u, T.chip, 0.45, EASE.back)})`;
+        const tinted = seg(u, T.shift, 0.5, EASE.line);
+        chip.style.backgroundColor = mix(CREAM, outcome.tint, tinted);
+        chip.style.borderColor = mix(BORDER, outcome.deep, tinted);
+
+        // Colour field: opens from the intent chip, then settles on the right.
+        const wipe = seg(u, T.shift, 0.95);
+        const close = seg(u, T.exit, 0.45, EASE.in);
+        const chipAtShift = { x: X_CENTER + chipX, y: CY - (H_CLOSED + GROW) / 2 + 107 };
+        const fieldX = lerp(chipAtShift.x, FIELD.x, wipe), fieldY = lerp(chipAtShift.y, FIELD.y, wipe);
+        at(field, fieldX, fieldY, `scale(${wipe * (1 - close)})`);
+        field.style.opacity = u >= T.shift ? 1 : 0;
+        const rippling = seg(u, T.shift + 0.7, 0.5, EASE.line) * (1 - seg(u, T.exit - 0.25, 0.25, EASE.line));
+        fieldRings.forEach((ring, i) => {
+          const p = (u / 3.2 + i * 0.5) % 1;
+          ring.setAttribute("cx", FIELD.x);
+          ring.setAttribute("cy", FIELD.y);
+          ring.setAttribute("r", FIELD_R + 5 + 46 * p);
+          ring.style.opacity = rippling * (1 - p) * clamp(p * 8) * 0.9;
+        });
+
+        // The outcome builds on the field: label, title, then the reply or the team.
+        const sideY = outcome.dy + floatB;
+        at(side, -10 * exit, sideY);
+        side.style.opacity = 1 - exit;
+        side.style.filter = exit > 0 ? `blur(${4 * exit}px)` : "none";
+        arrive(sideLabel, seg(u, T.shift + 0.4, 0.55));
+        arrive(sideTitle, seg(u, T.shift + 0.5, 0.6));
+
+        // AI Agent's mark: flies in, turns while it reads, then answers or steps back.
+        const dock = { x: frontX + CARD_W - 31, y: top + 29 };
+        const landed = seg(u, T.agent, 0.6);
+        const leaving = (1 - exit);
+        let tokenX = dock.x + 46 * (1 - landed), tokenY = dock.y - 38 * (1 - landed);
+        let tokenScale = 0.55 + 0.45 * seg(u, T.agent, 0.6, EASE.back);
+        let tokenOpacity = clamp((u - T.agent) / 0.2);
+        let nameOpacity = seg(u, T.agent + 0.25, 0.35, EASE.line);
+        const turn = 360 * seg(u, T.agent + 0.35, T.chip + 0.35 - (T.agent + 0.35), EASE.spin) + 6 * t;
+        const reading = seg(u, T.agent + 0.45, 0.3, EASE.line) * (1 - seg(u, T.chip, 0.3, EASE.line));
+        readRings.forEach((ring, i) => {
+          const p = (u * 0.95 + i * 0.5) % 1;
+          ring.setAttribute("cx", tokenX);
+          ring.setAttribute("cy", tokenY);
+          ring.setAttribute("r", 13 + 14 * p);
+          ring.style.opacity = reading * (1 - p) * 0.75;
+        });
+
+        const mailBadge = { x: frontX + 41, y: top + 20 };
+        let oneX = mailBadge.x, oneY = mailBadge.y;
+        let oneScale = seg(u, T.badge, 0.45, EASE.back);
+        let checkScale = 0;
+
+        if (isResponse) {
+          // The mark flies to the reply bubble and the reply writes itself.
+          arrive(reply, seg(u, T.shift + 0.65, 0.6));
+          const slot = { x: SIDE_X + 23, y: BODY_TOP + 23 + sideY };
+          const fly = seg(u, T.fly, 0.7, EASE.glide);
+          tokenX = lerp(tokenX, slot.x, fly) - 10 * exit;
+          tokenY = lerp(tokenY, slot.y, fly) - 16 * Math.sin(Math.PI * fly);
+          nameOpacity *= 1 - seg(u, T.fly, 0.25, EASE.line);
+          const typing = u >= T.fly + 0.6 && u < T.stream;
+          replyDots.forEach((dot) => { dot.style.visibility = typing ? "visible" : "hidden"; });
+          bounce(replyDots, u);
+          const step = 1.2 / Math.max(1, replyWords.length - 1);
+          replyWords.forEach((word, i) => {
+            const k = seg(u, T.stream + i * step, 0.3);
+            word.style.opacity = k;
+            word.style.transform = `translateY(${(1 - k) * 4}px)`;
+          });
+          // Resolved: the ticket's "1" turns into a check.
+          oneScale *= 1 - seg(u, T.check, 0.12, EASE.in);
+          checkScale = seg(u, T.check + 0.12, 0.45, EASE.back);
+          done.style.opacity = clamp((u - (T.check + 0.2)) / 0.12);
+          done.style.transform = `scale(${0.8 + 0.2 * seg(u, T.check + 0.2, 0.5, EASE.back)})`;
+        } else {
+          // The mark shakes, then steps back while the team arrives.
+          const shake = clamp((u - T.shake) / 0.45);
+          tokenX += 3 * Math.sin(2 * Math.PI * 4 * (u - T.shake)) * (shake > 0 && shake < 1 ? 1 - shake : 0);
+          const stepBack = seg(u, T.shift + 0.1, 0.5, EASE.line);
+          tokenScale *= 1 - 0.12 * stepBack;
+          tokenOpacity *= 1 - 0.62 * stepBack;
+          nameOpacity *= 1 - 0.55 * stepBack;
+          const land = T.hand + 0.8;
+          avatars.forEach((avatar, i) => {
+            const k = seg(u, T.shift + 0.65 + i * 0.09, 0.55);
+            const bump = i === 0 ? 0.1 * Math.sin(Math.PI * clamp((u - land + 0.05) / 0.4)) : 0;
+            avatar.style.opacity = clamp(k * 1.5);
+            avatar.style.transform = `translateX(${(1 - k) * 16}px) scale(${1 + bump})`;
+            avatar.style.filter = k < 1 ? `blur(${(1 - k) * 5}px)` : "none";
+          });
+          // The ticket's "1" flies to a teammate, who starts typing.
+          const hand = seg(u, T.hand, 0.8, EASE.glide);
+          const seat = { x: SIDE_X + 33, y: BODY_TOP + 6 + sideY };
+          oneX = lerp(mailBadge.x, seat.x, hand) - 10 * exit * hand;
+          oneY = lerp(mailBadge.y, seat.y, hand) - 74 * Math.sin(Math.PI * hand);   // high arc, clear of the mark
+          oneScale *= 1 + 0.25 * Math.sin(Math.PI * hand);
+          teamBubble.style.opacity = clamp((u - (land + 0.15)) / 0.12);
+          teamBubble.style.transform = `scale(${0.7 + 0.3 * seg(u, land + 0.15, 0.45, EASE.back)})`;
+          bounce(teamDots, u);
+          done.style.opacity = clamp((u - (land + 0.75)) / 0.12);
+          done.style.transform = `scale(${0.8 + 0.2 * seg(u, land + 0.75, 0.5, EASE.back)})`;
+        }
+
+        at(token, tokenX, tokenY, `scale(${tokenScale})`);
+        token.style.opacity = tokenOpacity * leaving;
+        tokenMark.style.transform = `rotate(${turn}deg)`;
+        agentName.style.opacity = nameOpacity;
+        at(badgeOne, oneX, oneY, `scale(${oneScale})`);
+        badgeOne.style.opacity = (u >= T.badge ? 1 : 0) * leaving;
+        at(badgeCheck, mailBadge.x, mailBadge.y, `scale(${checkScale})`);
+        badgeCheck.style.opacity = (checkScale > 0 ? 1 : 0) * leaving;
+
+        fills.forEach((fill, i) => { fill.style.transform = `scaleX(${i < index ? 1 : i === index ? u / CYCLE : 0})`; });
+      }
+
+      // Scale the 760 x 276 stage to the box.
+      const fit = () => { stage.style.transform = `scale(${root.clientWidth / 760})`; };
+      new ResizeObserver(fit).observe(root);
+      fit();
+
+      const frozen = new URLSearchParams(location.search).get("t");
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const STILL = T.exit - 0.3;     // a ticket's finished outcome
+      let clock = 0;
+
+      bars.forEach((bar, i) => {
+        bar.setAttribute("aria-label", `Show ticket ${i + 1} of ${TICKETS.length}: ${TICKETS[i].words.join(" ")}`);
+        bar.addEventListener("click", () => {
+          clock = i * CYCLE;
+          if (frozen !== null || reduce) render(clock + STILL);
+        });
+      });
+
+      function start() {
+        scene.style.visibility = "visible";
+        if (frozen !== null) { render(Number(frozen) || 0); return; }
+        if (reduce) { render(STILL); return; }
+
+        // Clock that only advances while the tab is visible.
+        let last = null;
+        const tick = (now) => {
+          if (last !== null && !document.hidden) clock += Math.min(now - last, 100) / 1000;
+          last = now;
+          render(clock % LOOP);
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+
+      // Wait for the fonts, because the animation measures the words.
+      const faces = ['400 21px "Feature Deck"', '500 10px "Red Hat Mono"', "500 13px Inter", "600 13px Inter"];
+      Promise.all(faces.map((face) => document.fonts.load(face)))
+        .catch((error) => { console.warn("A font did not load; the animation uses a fallback face.", error); })
+        .then(() => document.fonts.ready)
+        .then(start);
+    })();
+  </script>
+</body>
+</html>
