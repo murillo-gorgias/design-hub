@@ -22,7 +22,7 @@ window.HUB_PROJECTS = [
     href: 'gaia-intent-routing/',
     image: 'thumbs/gaia-intent-routing.png',
     kind: 'Exploration',
-    date: '2026-11-18',
+    date: '2026-11-19',
   },
   {
     title: 'Gaia avatar',
